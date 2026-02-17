@@ -1,4 +1,3 @@
-
 # core/sim_paths.py
 from __future__ import annotations
 
@@ -33,8 +32,9 @@ def simulate_gbm_paths(spec: SimSpec) -> np.ndarray:
     """
     Single-asset GBM simulator.
 
-    Returns:
-        np.ndarray shape (n_paths, steps+1)
+    IMPORTANT (per tests):
+    - Returns shape (n_paths, steps)
+    - Contains S_1..S_steps (does NOT include S0 column)
     """
     if spec.steps <= 0:
         raise ValueError("steps must be > 0")
@@ -49,6 +49,7 @@ def simulate_gbm_paths(spec: SimSpec) -> np.ndarray:
 
     rng = np.random.default_rng(spec.seed)
 
+    # we simulate internally with S0, then drop it to match expected API
     paths = np.zeros((spec.n_paths, spec.steps + 1), dtype=float)
     paths[:, 0] = spec.S0
 
@@ -59,7 +60,8 @@ def simulate_gbm_paths(spec: SimSpec) -> np.ndarray:
         z = rng.standard_normal(spec.n_paths)
         paths[:, t] = paths[:, t - 1] * np.exp(drift + vol * z)
 
-    return paths
+    # Drop S0 column → return S1..S_steps
+    return paths[:, 1:]
 
 
 def simulate_correlated_gbm_paths(
@@ -76,7 +78,7 @@ def simulate_correlated_gbm_paths(
     Correlated GBM simulator for 2 assets.
 
     Returns:
-        np.ndarray shape (n_paths, steps+1, 2)
+        np.ndarray shape (n_paths, steps+1, 2) including S0
     """
     if steps <= 0:
         raise ValueError("steps must be > 0")
